@@ -5,11 +5,9 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     Crawler crawler;
-    
-    public float timeToNextMove = 0f;
-    public float moveDelay = 1f;
 
     public float moveSpeed = 0.5f;
+    public float turnSpeed = 90f;
 
     float moveDistRemaining;
 
@@ -35,17 +33,20 @@ public class PlayerController : MonoBehaviour
         if(Input.GetKey(KeyCode.UpArrow)){
             Move(moveSpeed * Time.deltaTime);
         }
+        if(Input.GetKey(KeyCode.LeftArrow)){
+            transform.Rotate(0, -turnSpeed * Time.deltaTime, 0);
+        }
+        if(Input.GetKey(KeyCode.RightArrow)){
+            transform.Rotate(0, turnSpeed * Time.deltaTime, 0);
+        }
     }
 
     void Move(float dist){
-        Debug.Log("=============STARING MOVE=============");
-        //Debug.Log("Move Called " + dist);
         moveDistRemaining = dist;
 
         //ForLoop is a failsafe to prevent infinite loops
         for(int i = 0; i < 100; i++){
             if(moveDistRemaining > 0){
-                //Debug.Log("Move Remaining: " + moveDistRemaining);
                 moveDistRemaining -= crawler.Step(moveDistRemaining);
             }
         }
