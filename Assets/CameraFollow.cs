@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
-    public GameObject player;
+    public GameObject target;
     public GameObject desiredPosition;
     public float cameraMoveSpeed = 30f;
     public float cameraTurnSpeed = 30f;
@@ -18,12 +18,12 @@ public class CameraFollow : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Vector3 playerPos = player.transform.position;
+        Vector3 playerPos = target.transform.position;
         Vector3 targetPos = desiredPosition.transform.position;
         Vector3 myPos = transform.position;
         
-        transform.position = Vector3.MoveTowards(myPos  , targetPos, cameraMoveSpeed * Time.deltaTime);
-        transform.LookAt(player.transform);
+        transform.position = Vector3.MoveTowards(myPos, targetPos, cameraMoveSpeed * Time.deltaTime);
+        transform.LookAt(target.transform);
 
 
         /*

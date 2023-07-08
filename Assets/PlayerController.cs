@@ -23,13 +23,13 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        /*
-        timeToNextMove -= Time.deltaTime;
-        if(timeToNextMove <= 0){
-            timeToNextMove += moveDelay;
-            Move(moveSpeed);
+        if(Input.GetKeyDown(KeyCode.Space)){
+            crawler.Step(10f);
         }
-        */
+        if(Input.GetKeyDown(KeyCode.I)){
+            crawler.segmentIntersectTest(moveDistRemaining);
+        }
+
         if(Input.GetKey(KeyCode.UpArrow)){
             Move(moveSpeed * Time.deltaTime);
         }

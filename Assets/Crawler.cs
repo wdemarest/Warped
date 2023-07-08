@@ -9,6 +9,7 @@ public class Crawler : MonoBehaviour
 
     public GameObject Marker;
     public GameObject Marker2;
+    public GameObject Marker3;
     
     Mesh SM;
     public Vector3[] myTri;
@@ -19,13 +20,26 @@ public class Crawler : MonoBehaviour
 
     //======================
 
-    float raycastBackupDist = 0.01f;
-    public float moveSpeed = 0.5f;
+    float raycastBackupDist = 0.1f;
 
-    Vector3 gizEdgePointA;
-    Vector3 gizEdgePointB;
-    Vector3 gizPointBehind;
-    Vector3 gizPointAhead;
+    public Vector3 gizEdgePointA;
+    public Vector3 gizEdgePointB;
+    public Vector3 gizPointBehind;
+    public Vector3 gizPointAhead;
+
+    public Vector3 gizFrom;
+    public Vector3 gizTo;
+
+    public Vector3 fromUnaltered;
+    public Vector3 toUnaltered;
+
+    public Vector3 fromNormalized;
+    public Vector3 toNormalized;
+    
+    public Vector3[] vertices;
+    public int[] showTriangles;
+
+    public Vector3[] segmentIntersectTestParams;
 
 
     
@@ -33,7 +47,14 @@ public class Crawler : MonoBehaviour
     void Start()
     {
         SM = SpaceObject.GetComponent<MeshCollider>().sharedMesh;
-        SetInitialMyTriHACKED();
+        vertices = SM.vertices;
+        for(int i = 0; i < vertices.Length; i++){
+            vertices[i] = SpaceObject.transform.TransformPoint(vertices[i]);
+        }
+
+        showTriangles = SM.triangles;
+
+        InitPosAndRotation();
     }
 
     // Update is called once per frame
@@ -48,30 +69,31 @@ public class Crawler : MonoBehaviour
             Gizmos.color = Color.red;
             Gizmos.DrawLine(gizEdgePointA, gizEdgePointB);
             Gizmos.color = Color.white;
-            Gizmos.DrawLine(transform.position, transform.position + transform.forward * moveSpeed);
+            Gizmos.DrawLine(transform.position, transform.position + transform.forward * 5);
             Gizmos.color = Color.black;
             Gizmos.DrawLine(transform.position, transform.position + transform.forward * -1);
 
-            /*
+            
             Gizmos.color = Color.red;
-            Gizmos.DrawSphere(gizEdgePointA, 0.01f);
+            Gizmos.DrawSphere(gizEdgePointA, 0.1f);
             Gizmos.color = Color.blue;
-            Gizmos.DrawSphere(gizEdgePointB, 0.01f);
+            Gizmos.DrawSphere(gizEdgePointB, 0.1f);
             Gizmos.color = Color.green;
-            Gizmos.DrawSphere(gizPointBehind, 0.01f);
+            Gizmos.DrawSphere(gizPointBehind, 0.1f);
             Gizmos.color = Color.yellow;
-            Gizmos.DrawSphere(gizPointAhead, 0.01f);
-            */
-            Gizmos.color = Color.red;
-            Gizmos.DrawSphere(myTri[0], 0.01f);
-            Gizmos.DrawSphere(myTri[1], 0.01f);
-            Gizmos.DrawSphere(myTri[2], 0.01f);
+            Gizmos.DrawSphere(gizPointAhead, 0.1f);
 
-        }
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawSphere(gizFrom, 0.1f);
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawSphere(gizTo, 0.1f);
 
-        if(intersection != Vector3.zero){
+            float cubeSize = 0.09f;
             Gizmos.color = Color.white;
-            Gizmos.DrawSphere(intersection, 0.01f);
+            Gizmos.DrawCube(myTri[0], new Vector3(cubeSize, cubeSize, cubeSize));
+            Gizmos.DrawCube(myTri[1], new Vector3(cubeSize, cubeSize, cubeSize));
+            Gizmos.DrawCube(myTri[2], new Vector3(cubeSize, cubeSize, cubeSize));
+            
         }
     }
 
@@ -99,6 +121,8 @@ public class Crawler : MonoBehaviour
                 TurnOverEdge(edgePointA, edgePointB, pointBehind);
 
                 //Debug.Log("Stopped Short After: " + distMoved);
+                Instantiate(Marker, transform.position, Quaternion.identity);
+
                 return distMoved;
             }
         }
@@ -107,6 +131,9 @@ public class Crawler : MonoBehaviour
 
         Debug.Log("Moved Full Remaining: " + moveDistRemaining);
         CheckOnSurfaceHACKED();
+
+        Instantiate(Marker, transform.position, Quaternion.identity);
+
         return moveDistRemaining;
     }
 
@@ -225,14 +252,14 @@ public class Crawler : MonoBehaviour
         Vector3? pointAheadNullable = FindPointAhead(edgePointA, edgePointB, pointBehind, out int triIndex);
 
         if(pointAheadNullable == null){
-            Debug.Log("No point ahead");
-            return;
+            throw new System.Exception("No point ahead");
+            //return;
         }
+
+        Vector3 pointAhead = (Vector3)pointAheadNullable;
 
         myTri = GetTriFromIndex(triIndex);
         Debug.Log("--------------------------------------------------------- Assigned myTri using index: " + triIndex);
-
-        Vector3 pointAhead = (Vector3)pointAheadNullable;
 
         gizEdgePointA = edgePointA;
         gizEdgePointB = edgePointB;
@@ -246,10 +273,22 @@ public class Crawler : MonoBehaviour
         Vector3 forwardFromMe = transform.position + transform.forward;
         Vector3 adjustedForwardFromMe = forwardFromMe + Vector3.Project(transform.position - forwardFromMe, axisOfEdge);
 
+        gizFrom = adjustedForwardFromMe;
+        gizTo = adjustedPointAhead;
         Vector3 from = adjustedForwardFromMe - transform.position;
         Vector3 to = adjustedPointAhead - transform.position;
+        
+        fromUnaltered = from;
+        toUnaltered = to;
+        fromNormalized = from.normalized;
+        toNormalized = to.normalized;
 
-        float angleToTurn = Vector3.Angle(from, to);
+        Debug.Log("From: " + from.normalized);
+        Debug.Log("To: " + to.normalized);
+
+        float angleToTurn = Vector3.Angle(from.normalized, to.normalized);
+
+        
 
         //Check if we're turning upwards
         if(Vector3.Angle(Vector3.Cross(from, to), transform.right) > 90){
@@ -265,7 +304,6 @@ public class Crawler : MonoBehaviour
 
     Vector3? FindPointAhead(Vector3 edgePointA, Vector3 edgePointB, Vector3 pointBehind, out int triIndex){
         int[] triangles = SM.triangles;
-        Vector3[] vertices = SM.vertices;
 
         for (triIndex = 0; triIndex < triangles.Length/3; triIndex ++){
             
@@ -293,27 +331,31 @@ public class Crawler : MonoBehaviour
 
         //HACK: Add 0.01f so ray doesn't land on the edge I'm on.
         if(!Physics.Raycast(transform.position + (-raycastDirection * raycastBackupDist) + transform.forward * 0.01f, raycastDirection, out hit, raycastBackupDist + 1f)){
-            throw new System.Exception("No tri");
+            throw new System.Exception("No tri");   
         }
 
         //Debug.Log("hit.triIndex: " + hit.triangleIndex);
     }
 
-    void SetInitialMyTriHACKED(){
+    void InitPosAndRotation(){
         RaycastHit hit;
         Vector3 raycastDirection = -transform.up;
 
-        //HACK: Add 0.01f so ray doesn't land on the edge I'm on.
-        if(!Physics.Raycast(transform.position + (-raycastDirection * raycastBackupDist) + transform.forward * 0.01f, raycastDirection, out hit)){
+        if(!Physics.Raycast(transform.position + (-raycastDirection * raycastBackupDist), raycastDirection, out hit)){
             throw new System.Exception("No tri");
         }
 
         //Debug.Log("hit.triIndex: " + hit.triangleIndex);
         myTri = GetTriFromIndex(hit.triangleIndex);
+
+        Vector3 initialUp = hit.normal;
+
+        transform.rotation = Quaternion.LookRotation(Vector3.RotateTowards(transform.forward, initialUp, Mathf.Infinity, 0.0f));
+
+        transform.Rotate(90, 0, 0);
     }
     
     Vector3[] GetTriFromIndex(int triIndex){
-        Vector3[] vertices = SM.vertices;
         int[] triangles = SM.triangles;
 
         /*
@@ -360,11 +402,25 @@ public class Crawler : MonoBehaviour
     }
 */
 
+    public void segmentIntersectTest(float moveDistRemaining){
+        Vector3[] myParams = segmentIntersectTestParams;
+
+        Instantiate(Marker2, myParams[0], Quaternion.identity);
+        Instantiate(Marker2, myParams[1], Quaternion.identity);
+
+        if(LineSegmentIntersection(out Vector3 intersection, transform.position, transform.position + transform.forward * moveDistRemaining, myParams[0], myParams[1])){
+            Debug.Log("Intersection: " + intersection);
+            Instantiate(Marker3, intersection, Quaternion.identity);
+        }
+    }
+
     public static bool LineSegmentIntersection(out Vector3 intersection, Vector3 a1, Vector3 a2, Vector3 b1, Vector3 b2){
-        Debug.Log("a1: " + a1);
-        Debug.Log("a2: " + a2);
-        Debug.Log("b1: " + b1);
-        Debug.Log("b2: " + b2);
+        //Debug.Log("a1: " + a1);
+        //Debug.Log("a2: " + a2);
+        //Debug.Log("b1: " + b1);
+        //Debug.Log("b2: " + b2);
+        //gizB1 = b1;
+        //gizB2 = b2;
 
 
         intersection = Vector3.zero;
